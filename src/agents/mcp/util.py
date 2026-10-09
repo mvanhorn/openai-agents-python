@@ -572,6 +572,10 @@ class MCPUtil:
         needs_approval: (
             bool | Callable[[RunContextWrapper[Any], dict[str, Any], str], Awaitable[bool]]
         ) = server._get_needs_approval_for_tool(tool, agent)
+        discovered_annotations = tool.annotations
+        mcp_annotations = (
+            None if discovered_annotations is None else discovered_annotations.model_copy(deep=True)
+        )
 
         function_tool = _build_wrapped_function_tool(
             name=tool_public_name,
@@ -596,6 +600,7 @@ class MCPUtil:
             ),
             needs_approval=needs_approval,
             mcp_title=resolve_mcp_tool_title(tool),
+            mcp_annotations=mcp_annotations,
             tool_origin=ToolOrigin(
                 type=ToolOriginType.MCP,
                 mcp_server_name=get_mcp_server_log_name(server.name),

@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from inline_snapshot import snapshot
 from mcp import Tool as MCPToolType
-from mcp.types import CallToolResult as CallToolResultType, TextContent
+from mcp.types import CallToolResult as CallToolResultType, TextContent, ToolAnnotations
 from pydantic import BaseModel, TypeAdapter
 
 import agents._debug as _debug
@@ -3072,3 +3072,16 @@ def test_to_function_tool_description_falls_back_to_mcp_title():
 
     assert function_tool.description == "Search Docs"
     assert function_tool._mcp_title == "Search Docs"
+
+
+def test_to_function_tool_exposes_mcp_annotations():
+    server = FakeMCPServer()
+    annotations = ToolAnnotations.model_validate(
+        {"title": "Archive Record", "destructiveHint": True}
+    )
+    tool = MCPTool(name="archive_record", inputSchema={}, annotations=annotations)
+
+    function_tool = MCPUtil.to_function_tool(tool, server, convert_schemas_to_strict=False)
+
+    assert function_tool.mcp_annotations == annotations
+    assert function_tool.mcp_annotations is not annotations

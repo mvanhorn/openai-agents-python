@@ -32,6 +32,9 @@ from typing import (
     overload,
 )
 
+# Runtime import keeps FunctionTool annotations resolvable without re-exporting the MCP model.
+# Importing agents already loads this package through the MCP compatibility layer.
+from mcp.types import ToolAnnotations
 from openai.types.responses import CustomToolParam
 from openai.types.responses.file_search_tool_param import Filters, RankingOptions
 from openai.types.responses.response_computer_tool_call import (
@@ -594,6 +597,15 @@ class FunctionTool:
     )
     """Original MCP server name, raw tool name, and configured server position for resume."""
 
+    mcp_annotations: ToolAnnotations | None = field(default=None, kw_only=True, repr=False)
+    """Discovered MCP annotations for this tool, or None when the server declared none.
+
+    These values are untrusted advisory metadata. Native optional hint values are not
+    guarantees of safety, and cancellation can leave the actual outcome unknown.
+    The declarations do not choose approvals or show whether an invocation changed
+    external state.
+    """
+
     @property
     def qualified_name(self) -> str:
         """Return the public qualified name used to identify this function tool."""
@@ -748,6 +760,7 @@ def _build_wrapped_function_tool(
     sync_invoker: bool = False,
     mcp_title: str | None = None,
     tool_origin: ToolOrigin | None = None,
+    mcp_annotations: ToolAnnotations | None = None,
 ) -> FunctionTool:
     """Create a FunctionTool with copied-tool-aware failure handling bound in one place."""
     on_invoke_tool = _with_context_function_tool_failure_error_handler(
@@ -778,6 +791,7 @@ def _build_wrapped_function_tool(
             _output_type_adapter=output_type_adapter,
             _mcp_title=mcp_title,
             _tool_origin=tool_origin,
+            mcp_annotations=mcp_annotations,
         ),
         failure_error_function,
     )
