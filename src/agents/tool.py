@@ -86,6 +86,7 @@ from .util._tool_errors import get_trace_tool_error
 from .util._types import MaybeAwaitable
 
 if TYPE_CHECKING:
+    from mcp.types import ToolAnnotations
     from typing_extensions import dataclass_transform
 
     from .agent import Agent, AgentBase
@@ -594,6 +595,15 @@ class FunctionTool:
     )
     """Original MCP server name, raw tool name, and configured server position for resume."""
 
+    mcp_annotations: ToolAnnotations | None = field(default=None, kw_only=True, repr=False)
+    """Untrusted MCP discovery annotations copied onto this tool.
+
+    The value is the installed MCP package's native annotations model when the server supplied
+    them, and ``None`` when discovery omitted annotations. ``None`` means the metadata is missing.
+    It is not evidence that the tool is safe or free of side effects. Attribute names follow the
+    installed MCP version.
+    """
+
     @property
     def qualified_name(self) -> str:
         """Return the public qualified name used to identify this function tool."""
@@ -748,6 +758,7 @@ def _build_wrapped_function_tool(
     sync_invoker: bool = False,
     mcp_title: str | None = None,
     tool_origin: ToolOrigin | None = None,
+    mcp_annotations: ToolAnnotations | None = None,
 ) -> FunctionTool:
     """Create a FunctionTool with copied-tool-aware failure handling bound in one place."""
     on_invoke_tool = _with_context_function_tool_failure_error_handler(
@@ -778,6 +789,7 @@ def _build_wrapped_function_tool(
             _output_type_adapter=output_type_adapter,
             _mcp_title=mcp_title,
             _tool_origin=tool_origin,
+            mcp_annotations=mcp_annotations,
         ),
         failure_error_function,
     )

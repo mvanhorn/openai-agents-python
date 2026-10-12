@@ -572,6 +572,11 @@ class MCPUtil:
         needs_approval: (
             bool | Callable[[RunContextWrapper[Any], dict[str, Any], str], Awaitable[bool]]
         ) = server._get_needs_approval_for_tool(tool, agent)
+        # Copy discovery annotations so hook consumers cannot mutate the server's cached tool.
+        raw_annotations = tool.annotations
+        mcp_annotations = (
+            raw_annotations.model_copy(deep=True) if raw_annotations is not None else None
+        )
 
         function_tool = _build_wrapped_function_tool(
             name=tool_public_name,
@@ -600,6 +605,7 @@ class MCPUtil:
                 type=ToolOriginType.MCP,
                 mcp_server_name=get_mcp_server_log_name(server.name),
             ),
+            mcp_annotations=mcp_annotations,
         )
         function_tool._mcp_tool_binding = (get_mcp_server_log_name(server.name), tool.name, None)
         return function_tool
