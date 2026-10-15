@@ -561,6 +561,7 @@ class ShellAction:
             status: Literal["completed", "failed"] = "completed"
             output_text = ""
             shell_output_payload: list[dict[str, Any]] | None = None
+            returned_structured_result = False
             provider_meta: dict[str, Any] | None = None
             max_output_length: int | None = None
             requested_max_output_length = normalize_max_output_length(
@@ -596,6 +597,7 @@ class ShellAction:
                         output_text = output_text[:max_output_length]
                     shell_output_payload = [serialize_shell_output(entry) for entry in normalized]
                     provider_meta = dict(result.provider_data or {})
+                    returned_structured_result = True
                 else:
                     output_text = str(result)
                     if requested_max_output_length is not None:
@@ -626,7 +628,9 @@ class ShellAction:
             raw_entries: list[dict[str, Any]] | None = None
             if shell_output_payload:
                 raw_entries = shell_output_payload
-            elif output_text:
+            elif output_text and not returned_structured_result:
+                # String results still fall back to one stdout entry. An empty ShellResult
+                # must stay empty; "(no output)" is only the human-facing tool text.
                 raw_entries = [
                     {
                         "stdout": output_text,

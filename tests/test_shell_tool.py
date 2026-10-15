@@ -287,6 +287,40 @@ async def test_shell_tool_structured_output_is_rendered() -> None:
 
 
 @pytest.mark.asyncio
+async def test_shell_tool_empty_structured_output_stays_empty() -> None:
+    shell_tool = ShellTool(executor=lambda request: ShellResult(output=[]))
+    tool_run = ToolRunShellCall(tool_call=_shell_call(), shell_tool=shell_tool)
+    agent = Agent(name="shell-agent", tools=[shell_tool])
+    context_wrapper: RunContextWrapper[Any] = RunContextWrapper(context=None)
+
+    result = await ShellAction.execute(
+        agent=agent,
+        call=tool_run,
+        hooks=RunHooks[Any](),
+        context_wrapper=context_wrapper,
+        config=RunConfig(),
+    )
+
+    assert isinstance(result, ToolCallOutputItem)
+    assert result.output == "(no output)"
+
+    raw_item = cast(dict[str, Any], result.raw_item)
+    assert raw_item["type"] == "shell_call_output"
+    assert raw_item["status"] == "completed"
+    assert raw_item["output"] == []
+    assert "shell_output" not in raw_item
+
+    input_payload = result.to_input_item()
+    assert isinstance(input_payload, dict)
+    payload_dict = cast(dict[str, Any], input_payload)
+    assert payload_dict["type"] == "shell_call_output"
+    assert payload_dict["output"] == []
+    assert "status" not in payload_dict
+    assert "shell_output" not in payload_dict
+    assert "provider_data" not in payload_dict
+
+
+@pytest.mark.asyncio
 async def test_shell_tool_emits_function_span() -> None:
     shell_tool = ShellTool(executor=lambda request: "shell span output")
     tool_run = ToolRunShellCall(tool_call=_shell_call("call_shell_trace"), shell_tool=shell_tool)
